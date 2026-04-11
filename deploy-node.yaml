@@ -15,41 +15,32 @@
 
 - name: Create new linux user for application
   hosts: webserver
+  vars_files:
+    project-vars.yaml
   tasks:
-    - name: Create group 'appuser'
-      group:
-        name: appuser
-        state: present
     - name: Create user 'appuser'
       user:
-        name: danya
-        comment: "Danya App User"
-        group: appuser
-        state: present
-        create_home: yes
-        shell: /bin/bash
+        name: "{{linux_name}}"
+        comment: "Linux User"
+        group: admin
 
 - name: Deploy NodeJS application
   hosts: webserver
   become: True
-  become_user: danya
+  become_user: "{{linux_name}}"
+  vars_files:
+    project-vars.yaml
   tasks:
-#    - name: Copy nodejs application files
-#      copy:
-#        src: /Users/danielnagorniy/Developer/DevOps/15_Ansible/nodejs-app/nodejs-app-1.0.0.tgz
-#        dest: /root/app-1.0.0.tgz
     - name: Extract application files
       unarchive:
-#        src: /root/app-1.0.0.tgz
-        src: /Users/danielnagorniy/Developer/DevOps/15_Ansible/nodejs-app/nodejs-app-1.0.0.tgz
-        dest: /home/danya
-#        remote_src: yes
+        src: "{{location}}/nodejs-app-{{version}}.tgz"
+        dest: "{{user_home_dir}}"
     - name: Install application dependencies
       npm:
-        path: /home/danya/package
+        path: "{{user_home_dir}}/package"
     - name: Start application
       command:
-        chdir: /home/danya/package/app
+        chdir: "{{user_home_dir}}/package/app"
         cmd: node server
       async: 1000
       poll: 0

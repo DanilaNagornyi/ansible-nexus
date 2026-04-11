@@ -1,0 +1,4 @@
+    location: /Users/danielnagorniy/Developer/DevOps/15_Ansible/nodejs-app
+    version: 1.0.0
+    linux_name: danya
+    user_home_dir: /home/{{linux_name}}
