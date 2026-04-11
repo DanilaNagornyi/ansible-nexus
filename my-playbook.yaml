@@ -1,0 +1,12 @@
+---
+- name: Create nginx web server
+  hosts: webserver
+  tasks:
+    - name: uninstall nginx server
+      apt:
+        name: nginx
+        state: absent
+    - name: Stop nginx server
+      service:
+        name: nginx
+        state: stopped

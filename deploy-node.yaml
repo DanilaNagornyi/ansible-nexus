@@ -1,0 +1,60 @@
+---
+- name: Install NodeJS and npm
+  hosts: webserver
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        force_apt_get: yes
+        cache_valid_time: 3600
+    - name: Install NodeJS
+      apt:
+        pkg:
+         - nodejs
+         - npm
+
+- name: Create new linux user for application
+  hosts: webserver
+  tasks:
+    - name: Create group 'appuser'
+      group:
+        name: appuser
+        state: present
+    - name: Create user 'appuser'
+      user:
+        name: danya
+        comment: "Danya App User"
+        group: appuser
+        state: present
+        create_home: yes
+        shell: /bin/bash
+
+- name: Deploy NodeJS application
+  hosts: webserver
+  become: True
+  become_user: danya
+  tasks:
+#    - name: Copy nodejs application files
+#      copy:
+#        src: /Users/danielnagorniy/Developer/DevOps/15_Ansible/nodejs-app/nodejs-app-1.0.0.tgz
+#        dest: /root/app-1.0.0.tgz
+    - name: Extract application files
+      unarchive:
+#        src: /root/app-1.0.0.tgz
+        src: /Users/danielnagorniy/Developer/DevOps/15_Ansible/nodejs-app/nodejs-app-1.0.0.tgz
+        dest: /home/danya
+#        remote_src: yes
+    - name: Install application dependencies
+      npm:
+        path: /home/danya/package
+    - name: Start application
+      command:
+        chdir: /home/danya/package/app
+        cmd: node server
+      async: 1000
+      poll: 0
+    - name: Ensure application is running
+      shell: ps aux | grep node | grep -v grep
+      register: app_status
+    - debug:
+        msg: "{{ app_status.stdout_lines }}"
