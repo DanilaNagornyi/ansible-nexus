@@ -1,0 +1,78 @@
+---
+- name: Install Docker
+  hosts: ec2_instances
+  become: yes
+  tasks:
+    - name: Install Docker
+      yum:
+        name: docker
+        update_cache: yes
+        state: present
+    - name: Start Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+- name: Create new linux user for application
+  hosts: ec2_instances
+  become: yes
+  vars_files:
+    project-vars.yaml
+  tasks:
+    - name: Create user app
+      user:
+        name: "{{linux_name}}"
+        comment: "Linux User"
+        group: "{{user_groups}}"
+
+- name: Install Docker Compose
+  hosts: ec2_instances
+  become: yes
+  become_user: "{{linux_name}}"
+  tasks:
+    - name: Create docker-compose directory
+      file:
+        path: /root/.docker/cli-plugins
+        state: directory
+    - name: Get architecture of remote machine
+      shell: uname -m
+      register: architecture
+    - name: Install Docker Compose
+      get_url:
+        url: "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-{{architecture.stdout}}"
+        dest: ~/.docker/cli-plugins/docker-compose
+        mode: +x
+
+# Use it if you want to run docker commands without sudo, but it may cause security issues, so use it with caution
+#- name: Add ec2-user to docker group
+#  hosts: ec2_instances
+#  become: yes
+#  tasks:
+#    - name: Add ec2-user to docker group
+#      user:
+#        name: ec2-user
+#        groups: docker
+#        append: yes
+#    - name: Reconnect to apply group changes
+#      meta: reset_connection
+
+- name: Start docker containers
+  hosts: ec2_instances
+  become: yes
+  become_user: "{{linux_name}}"
+  vars_files:
+    project-vars.yaml
+  tasks:
+    - name: Copy docker-compose.yml to remote machine
+      copy:
+        src: /Users/danielnagorniy/Developer/DevOps/15_Ansible/ansible/docker-compose-full.yaml
+        dest: "/home/{{linux_name}}/docker-compose.yml"
+    - name: Docker login
+      docker_login:
+        username: "{{ dockerhub_username }}"
+        password: "{{ dockerhub_password }}"
+    - name: Start docker containers
+      comunity.docker.docker_compose_v2:
+        project_src: "/home/{{linux_name}}"
+        state: present

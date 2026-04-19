@@ -1,4 +1,8 @@
-    location: /Users/danielnagorniy/Developer/DevOps/15_Ansible/nodejs-app
-    version: 1.0.0
-    linux_name: danya
-    user_home_dir: /home/{{linux_name}}
+location: /Users/danielnagorniy/Developer/DevOps/15_Ansible/nodejs-app
+version: 1.0.0
+linux_name: danya
+user_home_dir: /home/{{linux_name}}
+user_groups: adm,docker
+
+dockerhub_username: your_dockerhub_username
+dockerhub_password: your_dockerhub_password
