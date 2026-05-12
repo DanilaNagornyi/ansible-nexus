@@ -12,44 +12,72 @@
 
 ## Overview
 
-This repository contains Ansible playbooks for two deployment flows:
+This repository contains Ansible playbooks for several infrastructure/deployment scenarios:
 
-- Deploying Sonatype Nexus on Ubuntu hosts (`nexus` group).
-- Deploying Docker + Docker Compose application stack on AWS EC2 (`ec2_instances` group).
-
-The latest update added Docker automation files (`deploy-docker.yaml`, `docker-compose-full.yaml`) and EC2 inventory support.
+- Sonatype Nexus installation on Ubuntu hosts (`nexus` group).
+- Docker stack deployment on AWS EC2 (`ec2_instances` group).
+- A roles-based Docker deployment flow (`create_user`, `start_containers`).
+- Optional dynamic EC2 inventory via `aws_ec2` plugin.
+- Optional Kubernetes deployment example.
 
 ## Project Structure
 
 ```text
 .
-├── ansible.cfg               # Default Ansible settings (uses hosts inventory)
-├── hosts                     # Inventory with nexus and ec2_instances groups
-├── project-vars.yaml         # Shared variables (user, app version, Docker Hub creds)
-├── deploy-nexus.yaml         # Nexus installation and startup playbook
-├── deploy-docker.yaml        # Docker engine, Docker Compose, and container startup
-├── docker-compose-full.yaml  # Multi-service compose file (java-app, mysql, phpmyadmin)
-├── deploy-node.yaml          # Legacy Node.js deployment playbook
-├── my-playbook.yaml          # Legacy test playbook
-└── nexus.sh                  # Manual Nexus setup helper script
+├── ansible.cfg
+├── hosts
+├── inventory_aws_ec2.yaml
+├── project-vars.yaml
+├── deploy-nexus.yaml
+├── deploy-docker.yaml
+├── deploy-docker-new-user.yaml
+├── deploy-docker-with-roles.yaml
+├── docker-compose-full.yaml
+├── deploy-node.yaml
+├── deploy-to-k8s.yaml
+├── my-playbook.yaml
+├── nexus.sh
+└── roles/
+    ├── create_user/
+    │   ├── defaults/main.yaml
+    │   └── tasks/main.yaml
+    └── start_containers/
+        ├── files/docker-compose.yaml
+        ├── tasks/main.yaml
+        └── vars/main.yaml
 ```
+
+## Roles-Based Flow
+
+`deploy-docker-with-roles.yaml` splits deployment into reusable blocks:
+
+- Install Docker on target hosts.
+- Create Linux user via role `create_user`.
+- Install Docker Compose for that user.
+- Start application stack via role `start_containers`.
+
+This is the most extensible way in this repository to scale playbooks for multiple environments.
 
 ## Prerequisites
 
-- Ansible installed on your local machine.
-- SSH access to target servers with the key configured in `hosts`.
-- For Docker deployment: AWS EC2 host using a yum-based distro (for example Amazon Linux).
-- Docker collection for Ansible modules:
+- Ansible installed locally.
+- SSH access to target servers.
+- For Docker deployment: a yum-based Linux host (for example Amazon Linux).
+- Required Ansible collections:
 
 ```bash
 ansible-galaxy collection install community.docker
+ansible-galaxy collection install amazon.aws
+ansible-galaxy collection install kubernetes.core
 ```
+
+For dynamic AWS inventory (`inventory_aws_ec2.yaml`), configure AWS credentials on your machine.
 
 ## Configuration
 
-### 1) Inventory (`hosts`)
+### 1) Static Inventory (`hosts`)
 
-Update IPs and connection settings for both groups:
+Example groups used in this project:
 
 ```ini
 [nexus]
@@ -59,14 +87,9 @@ Update IPs and connection settings for both groups:
 <EC2_HOST_IP>
 ```
 
-Current inventory uses:
+### 2) Project Variables (`project-vars.yaml`)
 
-- `nexus` as `root` with Python 3.12 interpreter.
-- `ec2_instances` as `ec2-user`.
-
-### 2) Project variables (`project-vars.yaml`)
-
-Set your values before running playbooks:
+Set your values before running Docker-related playbooks:
 
 ```yaml
 location: /path/to/nodejs-app
@@ -89,22 +112,35 @@ dockerhub_password: your_dockerhub_password
 ansible-playbook deploy-nexus.yaml
 ```
 
-### Deploy Docker stack on EC2
+### Deploy Docker (single playbook flow)
 
 ```bash
 ansible-playbook deploy-docker.yaml
 ```
 
-### Legacy Node.js deployment
+### Deploy Docker (roles-based flow)
 
 ```bash
-ansible-playbook deploy-node.yaml
+ansible-playbook deploy-docker-with-roles.yaml
+```
+
+### Deploy with dynamic AWS inventory
+
+```bash
+ansible-playbook -i inventory_aws_ec2.yaml deploy-docker.yaml
+```
+
+### Optional Kubernetes demo
+
+```bash
+ansible-playbook deploy-to-k8s.yaml
 ```
 
 ## Notes
 
-- `deploy-node.yaml` and `my-playbook.yaml` use host group `webserver`, which is not present in the current `hosts` file.
-- `deploy-docker.yaml` copies `docker-compose-full.yaml` to `/home/{{linux_name}}/docker-compose.yml` and starts services from that directory.
+- `deploy-node.yaml` and `my-playbook.yaml` are legacy examples.
+- Docker deployment uses Docker Hub credentials from variables.
+- The roles folder is ready for further extension (for example, adding `install_docker` as a dedicated role).
 
 ## License
 
