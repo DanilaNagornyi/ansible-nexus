@@ -1,0 +1,15 @@
+- name: Copy docker-compose.yml to remote machine
+  copy:
+    src: /Users/danielnagorniy/Developer/DevOps/15_Ansible/ansible/docker-compose-full.yaml
+    dest: "/home/{{linux_name}}/docker-compose.yml"
+
+- name: Docker login
+  docker_login:
+    registry_url: "{{ dockerhub_registry_url }}"
+    username: "{{ dockerhub_username }}"
+    password: "{{ dockerhub_password }}"
+
+- name: Start docker containers
+  comunity.docker.docker_compose_v2:
+    project_src: "/home/{{linux_name}}"
+    state: present

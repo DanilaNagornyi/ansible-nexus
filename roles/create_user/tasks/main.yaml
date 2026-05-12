@@ -1,0 +1,5 @@
+- name: Create user app
+  user:
+    name: "{{linux_name}}"
+    comment: "Linux User"
+    group: "{{user_groups}}"
